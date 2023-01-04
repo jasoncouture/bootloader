@@ -6,45 +6,51 @@ use std::{
 const BOOTLOADER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-
     #[cfg(feature = "uefi")]
-    {
-        let uefi_path = build_uefi_bootloader(&out_dir);
-        println!(
-            "cargo:rustc-env=UEFI_BOOTLOADER_PATH={}",
-            uefi_path.display()
-        );
-    }
-
+    uefi_main();
     #[cfg(feature = "bios")]
-    {
-        let bios_boot_sector_path = build_bios_boot_sector(&out_dir);
-        println!(
-            "cargo:rustc-env=BIOS_BOOT_SECTOR_PATH={}",
-            bios_boot_sector_path.display()
-        );
-        let bios_stage_2_path = build_bios_stage_2(&out_dir);
-        println!(
-            "cargo:rustc-env=BIOS_STAGE_2_PATH={}",
-            bios_stage_2_path.display()
-        );
-
-        let bios_stage_3_path = build_bios_stage_3(&out_dir);
-        println!(
-            "cargo:rustc-env=BIOS_STAGE_3_PATH={}",
-            bios_stage_3_path.display()
-        );
-
-        let bios_stage_4_path = build_bios_stage_4(&out_dir);
-        println!(
-            "cargo:rustc-env=BIOS_STAGE_4_PATH={}",
-            bios_stage_4_path.display()
-        );
-    }
+    bios_main();
 }
 
 #[cfg(not(docsrs_dummy_build))]
+#[cfg(feature = "uefi")]
+fn uefi_main() {
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let uefi_path = build_uefi_bootloader(&out_dir);
+    println!(
+        "cargo:rustc-env=UEFI_BOOTLOADER_PATH={}",
+        uefi_path.display()
+    );
+}
+
+#[cfg(not(docsrs_dummy_build))]
+#[cfg(feature = "bios")]
+fn bios_main() {
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let bios_boot_sector_path = build_bios_boot_sector(&out_dir);
+    println!(
+        "cargo:rustc-env=BIOS_BOOT_SECTOR_PATH={}",
+        bios_boot_sector_path.display()
+    );
+    let bios_stage_2_path = build_bios_stage_2(&out_dir);
+    println!(
+        "cargo:rustc-env=BIOS_STAGE_2_PATH={}",
+        bios_stage_2_path.display()
+    );
+
+    let bios_stage_3_path = build_bios_stage_3(&out_dir);
+    println!(
+        "cargo:rustc-env=BIOS_STAGE_3_PATH={}",
+        bios_stage_3_path.display()
+    );
+
+    let bios_stage_4_path = build_bios_stage_4(&out_dir);
+    println!(
+        "cargo:rustc-env=BIOS_STAGE_4_PATH={}",
+        bios_stage_4_path.display()
+    );
+}
+
 #[cfg(feature = "uefi")]
 fn build_uefi_bootloader(out_dir: &Path) -> PathBuf {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
@@ -80,7 +86,6 @@ fn build_uefi_bootloader(out_dir: &Path) -> PathBuf {
     }
 }
 
-#[cfg(not(docsrs_dummy_build))]
 #[cfg(feature = "bios")]
 fn build_bios_boot_sector(out_dir: &Path) -> PathBuf {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
@@ -123,7 +128,6 @@ fn build_bios_boot_sector(out_dir: &Path) -> PathBuf {
     convert_elf_to_bin(elf_path)
 }
 
-#[cfg(not(docsrs_dummy_build))]
 #[cfg(feature = "bios")]
 fn build_bios_stage_2(out_dir: &Path) -> PathBuf {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
@@ -168,7 +172,6 @@ fn build_bios_stage_2(out_dir: &Path) -> PathBuf {
     convert_elf_to_bin(elf_path)
 }
 
-#[cfg(not(docsrs_dummy_build))]
 #[cfg(feature = "bios")]
 fn build_bios_stage_3(out_dir: &Path) -> PathBuf {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
@@ -209,7 +212,6 @@ fn build_bios_stage_3(out_dir: &Path) -> PathBuf {
     convert_elf_to_bin(elf_path)
 }
 
-#[cfg(not(docsrs_dummy_build))]
 #[cfg(feature = "bios")]
 fn build_bios_stage_4(out_dir: &Path) -> PathBuf {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
@@ -282,22 +284,9 @@ fn convert_elf_to_bin(elf_path: PathBuf) -> PathBuf {
 // dummy implementations because docsrs builds have no network access
 
 #[cfg(docsrs_dummy_build)]
-fn build_uefi_bootloader(_out_dir: &Path) -> PathBuf {
-    PathBuf::new()
-}
+#[cfg(feature = "uefi")]
+fn uefi_main() {}
+
 #[cfg(docsrs_dummy_build)]
-fn build_bios_boot_sector(_out_dir: &Path) -> PathBuf {
-    PathBuf::new()
-}
-#[cfg(docsrs_dummy_build)]
-fn build_bios_stage_2(_out_dir: &Path) -> PathBuf {
-    PathBuf::new()
-}
-#[cfg(docsrs_dummy_build)]
-fn build_bios_stage_3(_out_dir: &Path) -> PathBuf {
-    PathBuf::new()
-}
-#[cfg(docsrs_dummy_build)]
-fn build_bios_stage_4(_out_dir: &Path) -> PathBuf {
-    PathBuf::new()
-}
+#[cfg(feature = "bios")]
+fn bios_main() {}
