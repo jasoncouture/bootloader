@@ -1,4 +1,8 @@
-use std::{io::Write, path::{Path, PathBuf}, process::Command};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 const QEMU_ARGS: &[&str] = &[
     "-device",
@@ -17,7 +21,10 @@ pub fn run_test_kernel_with_ramdisk(kernel_binary_path: &str, ramdisk_path: Opti
     run_test_kernel_with_ramdisk_internal(&kernel_path_buf, ramdisk_path_buf)
 }
 
-fn run_test_kernel_with_ramdisk_internal(kernel_path_buf: &PathBuf, ramdisk_path_buf: Option<&PathBuf>) {
+fn run_test_kernel_with_ramdisk_internal(
+    kernel_path_buf: &PathBuf,
+    ramdisk_path_buf: Option<&PathBuf>,
+) {
     use bootloader::DiskImageBuilder;
 
     let mut image_builder = DiskImageBuilder::new(&kernel_path_buf);
