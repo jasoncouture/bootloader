@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "40 5 * * *" # every day at 5:40
 
+# This causes PR pushes to cancel previous builds, but does not impact cron jobs due to use of .ref, which will have the commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Check
@@ -60,7 +65,7 @@ jobs:
       - name: Run api tests
         run: cargo test -p bootloader_api
       - name: Run integration tests
-        run: cargo test
+        run: cargo test -- --test-threads 1
 
       # test feature gates (only on one OS is enough)
       - name: Test with only UEFI feature
@@ -87,3 +92,24 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: r7kamura/rust-problem-matchers@v1.1.0
       - run: cargo clippy --all --all-targets
+
+  semver-checks:
+    name: Semver Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "semver-checks"
+          cache-targets: false
+      - run: cargo install cargo-semver-checks --locked
+      - name: Check semver (API)
+        run: cargo semver-checks check-release -p bootloader_api
+      - name: Check semver
+        run: cargo semver-checks check-release
+
+  typos:
+      name: Check spelling
+      runs-on: ubuntu-latest
+      steps:
+        - uses: crate-ci/typos@v1.0.4

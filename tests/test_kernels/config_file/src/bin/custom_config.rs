@@ -2,20 +2,21 @@
 #![no_main] // disable all Rust-level entry points
 
 use bootloader_api::{entry_point, BootInfo};
-use test_kernel_pie::{exit_qemu, QemuExitCode};
+use core::fmt::Write;
+use test_kernel_config_file::{exit_qemu, serial, QemuExitCode};
 
 entry_point!(kernel_main);
 
-fn kernel_main(_boot_info: &'static mut BootInfo) -> ! {
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    writeln!(serial(), "Entered kernel with boot info: {boot_info:?}").unwrap();
+    assert_eq!(boot_info._test_sentinel, 0xb001b001b001);
     exit_qemu(QemuExitCode::Success);
 }
 
 /// This function is called on panic.
-#[cfg(not(test))]
 #[panic_handler]
+#[cfg(not(test))]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    use core::fmt::Write;
-
-    let _ = writeln!(test_kernel_pie::serial(), "PANIC: {info}");
+    let _ = writeln!(serial(), "PANIC: {info}");
     exit_qemu(QemuExitCode::Failed);
 }

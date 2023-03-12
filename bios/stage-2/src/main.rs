@@ -24,9 +24,12 @@ mod vesa;
 /// We use this partition type to store the second bootloader stage;
 const BOOTLOADER_SECOND_STAGE_PARTITION_TYPE: u8 = 0x20;
 
-const STAGE_3_DST: *mut u8 = 0x0010_0000 as *mut u8; // 1MiB (typically 14MiB accessible here)
-const STAGE_4_DST: *mut u8 = 0x0020_0000 as *mut u8; // 2MiB (typically still 13MiB accessible here)
-const KERNEL_DST: *mut u8 = 0x0100_0000 as *mut u8; // 16MiB
+// 1MiB (typically 14MiB accessible here)
+const STAGE_3_DST: *mut u8 = 0x0010_0000 as *mut u8;
+// must match the start address in bios/stage-4/stage-4-link.ld
+const STAGE_4_DST: *mut u8 = 0x0013_0000 as *mut u8;
+// 16MiB
+const KERNEL_DST: *mut u8 = 0x0100_0000 as *mut u8;
 
 static mut DISK_BUFFER: AlignedArrayBuffer<0x4000> = AlignedArrayBuffer {
     buffer: [0; 0x4000],
@@ -39,9 +42,10 @@ pub extern "C" fn _start(disk_number: u16, partition_table_start: *const u8) -> 
 }
 
 fn start(disk_number: u16, partition_table_start: *const u8) -> ! {
-    screen::Writer.write_str(" -> SECOND STAGE\n").unwrap();
-
+    // Enter unreal mode before doing anything else.
     enter_unreal_mode();
+
+    screen::Writer.write_str(" -> SECOND STAGE\n").unwrap();
 
     // parse partition table
     let partitions = {
@@ -101,17 +105,23 @@ fn start(disk_number: u16, partition_table_start: *const u8) -> ! {
     let kernel_page_size = (((kernel_len - 1) / 4096) + 1) as usize;
     let ramdisk_start = KERNEL_DST.wrapping_add(kernel_page_size * 4096);
     writeln!(screen::Writer, "Loading ramdisk...").unwrap();
-    let ramdisk_len = match try_load_file("ramdisk", ramdisk_start, &mut fs, &mut disk, disk_buffer)
-    {
-        Some(s) => s,
-        None => 0u64,
-    };
+    let ramdisk_len =
+        try_load_file("ramdisk", ramdisk_start, &mut fs, &mut disk, disk_buffer).unwrap_or(0u64);
 
     if ramdisk_len == 0 {
         writeln!(screen::Writer, "No ramdisk found, skipping.").unwrap();
     } else {
         writeln!(screen::Writer, "Loaded ramdisk at {ramdisk_start:#p}").unwrap();
     }
+    let config_file_start = ramdisk_start.wrapping_add(ramdisk_len.try_into().unwrap());
+    let config_file_len = try_load_file(
+        "boot.json",
+        config_file_start,
+        &mut fs,
+        &mut disk,
+        disk_buffer,
+    )
+    .unwrap_or(0);
 
     let memory_map = unsafe { memory_map::query_memory_map() }.unwrap();
     writeln!(screen::Writer, "{memory_map:x?}").unwrap();
@@ -147,6 +157,11 @@ fn start(disk_number: u16, partition_table_start: *const u8) -> ! {
             start: ramdisk_start as u64,
             len: ramdisk_len,
         },
+        config_file: Region {
+            start: config_file_start as u64,
+            len: config_file_len,
+        },
+        last_used_addr: config_file_start as u64 + config_file_len - 1,
         memory_map_addr: memory_map.as_mut_ptr() as u32,
         memory_map_len: memory_map.len().try_into().unwrap(),
         framebuffer: BiosFramebufferInfo {

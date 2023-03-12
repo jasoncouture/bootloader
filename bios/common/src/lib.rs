@@ -8,6 +8,8 @@ pub struct BiosInfo {
     pub stage_4: Region,
     pub kernel: Region,
     pub ramdisk: Region,
+    pub config_file: Region,
+    pub last_used_addr: u64,
     pub framebuffer: BiosFramebufferInfo,
     pub memory_map_addr: u32,
     pub memory_map_len: u16,
